@@ -17,10 +17,9 @@
 d3.select('#demo-1')
     .style('color', 'blue')
     .style('font-size', '20px')
-    .text('This text was changed by D3!');
+    .text('This text was changed by bdatsko!');
 
-// TODO: change the text above to add your name
-// TODO: change the color to something else you like // keep in mind color contrast
+
 
 
 // Create and append new elements
@@ -29,7 +28,11 @@ d3.select('#demo-1')
     .text('This paragraph was created by D3')
     .style('background-color', 'lightgray');
 
-// TODO: append a new element with your favorite food and style it with a different background color
+d3.select('#demo-1')
+    .append('p')
+    .text('My favorite food is pizza')
+    .style('background-color', 'purple')
+    .style('color', 'white');
 
 // ============================================================================
 // SECTION 2: DATA BINDING - The Core D3 Pattern 
@@ -58,12 +61,21 @@ d3.select('#demo-2')
     .attr('fill', 'steelblue'); // Set fill color
 
 
-// TODO: sample electricity prices instead of gas and create rectangles instead of circles; make the color of the rectangles green;
+// Sample electricity prices and create rectangles
 const electricityPrices = sampledData.map(item => parseFloat(item.elec));
-// YOUR CODE GOES HERE 
 
-// Remember that circle needs radius (r) and center (cx, cy) to create it,
-// while rectangles need x, y, width, and height. You can use the electricity price to determine the height of the rectangle and set a fixed width.
+d3.select('#demo-2')
+    .append('svg')
+    .attr('width', 400) // Set width of the SVG
+    .attr('height', 100) // Set height of the SVG
+    .selectAll('rect') // Select rectangles that don't exist yet to tell D3 what kind of elements to create
+    .data(electricityPrices) // Bind the electricityPrices data to the rectangles
+    .join('rect') // Create a rectangle for each data point (this is where the rectangles are created)
+    .attr('x', (d, i) => i*25+30) // Set x position based on index
+    .attr('y', d=> 100-d*100) // Set y position
+    .attr('width', 20) // Set width of rectangle
+    .attr('height', d=> d*100)
+    .attr('fill', 'green'); // Set fill color
 
 // ============================================================================
 // SECTION 3: SCALES - Mapping Data to Pixels 
@@ -186,9 +198,8 @@ barSvg.append('text')
     .style('font-size', '12px')
     .text('Electricity Price (per kWh)');
 
-// TODO: Create Bar Chart that shows the top 15 states by gas price;
-// States should be on the y-axis and gas price on the x-axis, i.e. bars should be horizontal;
-// make the bars orange; add a title and axis labels.
+// Bar Chart that shows the top 15 states by gas price
+// States on the y-axis and gas price on the x-axis (horizontal bars), orange bars
 
 // prepare data
 energyData.sort((a, b) => parseFloat(b.gas) - parseFloat(a.gas)); // Sort data by gas price (descending)
@@ -201,21 +212,68 @@ const hBarWidth = 400 - hBarMargin.left - hBarMargin.right;
 const hBarHeight = 500 - hBarMargin.top - hBarMargin.bottom;
 
 // Create SVG for horizontal bar chart
-
+const hBarSvgGas = d3.select('#demo-4')
+    .append('svg')
+    .attr('viewBox', `0 0 ${hBarWidth + hBarMargin.left + hBarMargin.right} ${hBarHeight + hBarMargin.top + hBarMargin.bottom}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .append('g')
+    .attr('transform', `translate(${hBarMargin.left},${hBarMargin.top})`);
 
 // Create scales for the horizontal bar chart
+const xGasScale = d3.scaleLinear()
+    .domain([0, d3.max(top15Gas, d => d.gas)]) // Input: from 0 to max gas price in top 15
+    .range([0, hBarWidth]); // Output: width of the chart
 
+const yGasScale = d3.scaleBand()
+    .domain(top15Gas.map(d => d.state)) // Input: state names
+    .range([0, hBarHeight])
+    .padding(0.25);
 
 // Create axes and append them to the svg
+const xAxisGas = d3.axisBottom(xGasScale)
+    .ticks(5)
+    .tickFormat(d => `$${d.toFixed(2)}`); // Format ticks to show dollar amounts with 2 decimal places
 
+hBarSvgGas.append('g')
+    .attr('transform', `translate(0, ${hBarHeight})`) // Move x axis to the bottom of the chart
+    .call(xAxisGas);
+
+const yAxisGas = d3.axisLeft(yGasScale);
+
+hBarSvgGas.append('g')
+    .call(yAxisGas)
+    .attr('transform', 'translate(0, 0)') // Position y axis on the left
+    .selectAll('text')
+    .attr('text-anchor', 'end')
+    .style('font-size', '12px');
 
 // Create and append bars to the chart
-
+hBarSvgGas.selectAll('rect')
+    .data(top15Gas)
+    .join('rect')
+    .attr('x', 1)
+    .attr('y', d=> yGasScale(d.state)) // Set y position based on state
+    .attr('width', d => xGasScale(d.gas))
+    .attr('height', yGasScale.bandwidth())
+    .attr('fill', 'orange')
+    .attr('class', 'rotated-bar-chart');
 
 // Chart title
-
+hBarSvgGas.append('text')
+    .attr('x', hBarWidth / 2) // Center the title horizontally
+    .attr('y', -10) // Position the title above the chart
+    .attr('text-anchor', 'middle') // Center the text
+    .style('font-size', '16px')
+    .style('font-weight', 'bold')
+    .text('Top 15 States by Gas Price');
 
 // X axis label
+hBarSvgGas.append('text')
+    .attr('x', hBarWidth / 2) // Center the label horizontally
+    .attr('y', hBarHeight + 50) // Position the label below the x axis
+    .attr('text-anchor', 'middle') // Center the text
+    .style('font-size', '12px')
+    .text('Gas Price (per gallon)');
 
 
 // ============================================================================
@@ -322,7 +380,26 @@ lineData.forEach((region, i) => {
         .attr('alignment-baseline', 'center');
 })
 
-// Add title and axis label 
-// Do it yourself! Hint: look back at the bar chart code for how to add text elements for the title and axis labels.
+// Add title and axis labels
+lineSvg.append('text')
+    .attr('x', lineWidth / 2) // Center the title horizontally
+    .attr('y', -10) // Position the title above the chart
+    .attr('text-anchor', 'middle') // Center the text
+    .style('font-size', '16px')
+    .style('font-weight', 'bold')
+    .text('Electricity Prices by Region Over Time');
 
+lineSvg.append('text')
+    .attr('transform', 'rotate(-90)') // Rotate the text to be vertical
+    .attr('x', -lineHeight / 2) // Center the label vertically along the y axis
+    .attr('y', -55) // Position the label to the left of the y axis
+    .attr('text-anchor', 'middle') // Center the text
+    .style('font-size', '12px')
+    .text('Electricity Price ($ per kWh)');
 
+lineSvg.append('text')
+    .attr('x', lineWidth / 2) // Center the label horizontally
+    .attr('y', lineHeight + 50) // Position the label below the x axis
+    .attr('text-anchor', 'middle')
+    .style('font-size', '12px')
+    .text('Year');
